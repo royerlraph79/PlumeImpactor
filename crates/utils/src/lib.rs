@@ -21,6 +21,11 @@ use thiserror::Error as ThisError;
 pub enum Error {
     #[error("Info.plist not found")]
     BundleInfoPlistMissing,
+    
+    // MARK: - Device errors
+    #[error("Bundle failed to rename, make sure its available: {0}")]
+    BundleFailedToCopy(String),
+
     #[error("Zip error: {0}")]
     Zip(#[from] zip::result::ZipError),
     #[error("Info.plist not found")]

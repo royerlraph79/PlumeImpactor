@@ -140,7 +140,8 @@ impl Device {
         fs::symlink(PathBuf::from("Wrapper").join(app_name), &wrapped_bundle_path).await?;
         
         let applications_dir = PathBuf::from("/Applications").join(app_name);
-        fs::rename(&outer_app_dir, &applications_dir).await?;
+        fs::rename(&outer_app_dir, &applications_dir).await
+            .map_err(|_| Error::BundleFailedToCopy(applications_dir.to_string_lossy().into_owned()))?;
 
         Ok(())
     }
