@@ -1,4 +1,5 @@
 name: "Build & Bundle"
+
 on:
   push:
     branches:
@@ -11,6 +12,22 @@ on:
       - 'package/**'
       - '.github/workflows/build.yml'
   workflow_dispatch:
+    inputs:
+      build_linux:
+        description: 'Build for Linux'
+        required: false
+        type: boolean
+        default: true
+      build_windows:
+        description: 'Build for Windows'
+        required: false
+        type: boolean
+        default: true
+      build_macos:
+        description: 'Build for macOS'
+        required: false
+        type: boolean
+        default: true
 
 env:
   BINARY_NAME: plumeimpactor
@@ -18,6 +35,7 @@ env:
 
 jobs:
   build-linux:
+    if: github.event_name == 'push' || github.event.inputs.build_linux == 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: true
@@ -96,6 +114,7 @@ jobs:
           path: build/out/*
 
   build-windows:
+    if: github.event_name == 'push' || github.event.inputs.build_windows == 'true'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -133,6 +152,7 @@ jobs:
           path: build/out/*
 
   build-macos-slices:
+    if: github.event_name == 'push' || github.event.inputs.build_macos == 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -171,6 +191,7 @@ jobs:
           path: build/out/${{ env.BINARY_NAME }}-${{ matrix.arch }}
 
   build-macos-universal:
+    if: github.event_name == 'push' || github.event.inputs.build_macos == 'true'
     runs-on: macos-latest
     needs: [build-macos-slices]
     steps:
