@@ -54,7 +54,10 @@ impl Signer {
     }
 
     pub async fn modify_bundle(&mut self, bundle: &Bundle, team_id: &Option<String>) -> Result<(), Error> {
-        let bundles = bundle.collect_bundles_sorted()?;
+        let bundles = bundle.collect_bundles_sorted()?
+            .into_iter()
+            .filter(|b| b.bundle_type().should_have_entitlements())
+            .collect::<Vec<_>>();
 
         if let Some(new_name) = self.options.custom_name.as_ref() {
             bundle.set_name(new_name)?;
@@ -141,7 +144,10 @@ impl Signer {
         team_id: &String,
     ) -> Result<(), Error> {
 
-        let bundles = bundle.collect_bundles_sorted()?;
+        let bundles = bundle.collect_bundles_sorted()?
+            .into_iter()
+            .filter(|b| b.bundle_type().should_have_entitlements())
+            .collect::<Vec<_>>();
         let signer_settings = &self.options;
 
         let bundle_arc = Arc::new(bundle.clone());
@@ -241,6 +247,9 @@ impl Signer {
         certificate: Option<&CertificateIdentity>,
         provisioning_files: &[MobileProvision],
     ) -> Result<(), Error> {
+        if *bundle.bundle_type() == BundleType::Unknown {
+            return Ok(());
+        }
 
         let mut settings = Self::build_base_settings(certificate)?;
 
@@ -251,11 +260,9 @@ impl Signer {
 </plist>
 "#.to_string();
 
-        if 
-            (*bundle.bundle_type() == BundleType::AppExtension
-            || *bundle.bundle_type() == BundleType::App)
-            && !provisioning_files.is_empty()
-        {
+        // Only Apps and AppExtensions should have entitlements from provisioning profiles
+        // Dylibs, frameworks, and other components should be signed without entitlements
+        if bundle.bundle_type().should_have_entitlements() && !provisioning_files.is_empty() {
             let mut matched_prov = None;
 
             for prov in provisioning_files {
@@ -291,7 +298,6 @@ impl Signer {
         }
 
         settings.set_entitlements_xml(SettingsScope::Main, entitlements_xml)?;
-
         UnifiedSigner::new(settings).sign_path_in_place(bundle.bundle_dir())?;
 
         Ok(())
